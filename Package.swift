@@ -1,4 +1,4 @@
-// swift-tools-version:5.5
+// swift-tools-version:5.4
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -7,68 +7,76 @@ import PackageDescription
 // MARK: - Common
 
 private enum OSPlatform: Equatable {
-    case darwin     // macOS, iOS, tvOS, watchOS
-    case linux      // ubuntu(16/18/20) / Amazon Linux 2
-    case windows    // windows 10
-    
-    #if os(macOS)
-    static let current = OSPlatform.darwin
-    #elseif os(Linux)
-    static let current = OSPlatform.linux
-    #else
-    #error("Unsupported platform.")
-    #endif
+	case darwin     // macOS, iOS, tvOS, watchOS
+	case linux      // ubuntu(16/18/20) / Amazon Linux 2
+	case windows    // windows 10
+	
+#if os(macOS)
+	static let current = OSPlatform.darwin
+#elseif os(Linux)
+	static let current = OSPlatform.linux
+#else
+#error("Unsupported platform.")
+#endif
 }
 
 private func collectionElements<Element>(_ items: [[Element]]) -> [Element] {
-    return items.flatMap { $0 }
+	return items.flatMap { $0 }
 }
 
 private func conditionalElements<Element>(_ items: [Element], when platforms: [OSPlatform]) -> [Element] {
-    if !platforms.contains(OSPlatform.current) {
-        return []
-    }
-    return items
+	if !platforms.contains(OSPlatform.current) {
+		return []
+	}
+	return items
 }
 
 
 // MARK: - Package Config
 
 let package = Package(
-    name: "ShoutXerox",
+	name: "ShoutXerox",
 	platforms: [
 		.iOS(.v12),
 		.macOS(.v10_15),
 	],
-    products: [
-        // Products define the executables and libraries a package produces, and make them visible to other packages.
-        .library(
-            name: "ShoutXerox",
-            targets: ["ShoutXerox"]),
-    ],
+	products: [
+		// Products define the executables and libraries a package produces, and make them visible to other packages.
+		.library(
+			name: "ShoutXerox",
+			targets: ["ShoutXerox"]),
+	],
 	dependencies: collectionElements([
 		// Dependencies declare other packages that this package depends on.
 		conditionalElements([
-			.package(url: "https://github.com/Kitura/BlueSocket.git", .exact("2.0.2")),
-		], when: [.darwin, .linux]),
+			.package(name: "Socket", url: "https://github.com/Kitura/BlueSocket.git", .exact("2.0.2")),
+		], when: [.linux]),
 		conditionalElements([
+			.package(url: "https://github.com/Kitura/BlueSocket.git", .exact("2.0.2")),
 			.package(name: "CSSH", url: "https://github.com/DimaRU/Libssh2Prebuild.git", from: "1.9.0"),
 		], when: [.darwin]),
 	]),
 	targets: collectionElements([
-		conditionalElements([
+		[
 			.target(
 				name: "ShoutXerox",
-				dependencies: [
-					.product(name: "Socket", package: "BlueSocket"),
-					"CSSH"
-				]
+				dependencies: collectionElements([
+					[
+						"CSSH"
+					],
+					conditionalElements([
+						.product(name: "Socket", package: "BlueSocket"),
+					], when: [.darwin]),
+					conditionalElements([
+						"Socket",
+					], when: [.linux]),
+				])
 			),
 			.testTarget(
 				name: "ShoutXeroxTests",
 				dependencies: ["ShoutXerox"]
 			),
-		], when: [.darwin, .linux]),
+		],
 		conditionalElements([
 			.systemLibrary(
 				name: "CSSH",
@@ -79,4 +87,3 @@ let package = Package(
 		], when: [.linux]),
 	])
 )
-//
